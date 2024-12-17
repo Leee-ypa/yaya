@@ -148,7 +148,12 @@
             const chart = echarts.init(document.getElementById('heatmap-chart'));
             const countries = Object.keys(data);
             const universityCounts = countries.map(c => data[c].count);
-            const avgScores = countries.map(c => data[c].totalScore / data[c].count);
+            const avgScores = countries.map(c => 
+    countryData[c].count > 0 
+    ? countryData[c].totalScore / countryData[c].count 
+    : 0
+);
+
 
             chart.setOption({
                 title: { text: 'Global University Ranking Heatmap' },
