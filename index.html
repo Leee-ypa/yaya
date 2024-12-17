@@ -3,97 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global University Rankings Visualization</title>
-    <!-- 引入 ECharts 和世界地图组件 -->
+    <title>Global University Rankings</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts/map/js/world.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; margin: 0; text-align: center; }
         h1 { margin: 20px; }
         .chart-container { width: 45%; height: 500px; display: inline-block; margin: 20px auto; }
         .full-chart { width: 90%; height: 600px; margin: 20px auto; }
     </style>
 </head>
 <body>
-    <h1>Global University Rankings 2025 - Visualizations</h1>
-
+    <h1>Global University Rankings Visualization</h1>
     <!-- 图表容器 -->
     <div id="line-chart" class="chart-container"></div>
     <div id="bubble-chart" class="chart-container"></div>
     <div id="rose-chart" class="chart-container"></div>
     <div id="radar-chart" class="chart-container"></div>
     <div id="bar-chart" class="chart-container"></div>
+    <div id="waterfall-chart" class="chart-container"></div>
     <div id="map-chart" class="chart-container"></div>
-    <div id="heatmap-chart" class="full-chart"></div>
+    <div id="dual-axis-chart" class="full-chart"></div>
 
     <script>
         // 加载 CSV 数据
-        fetch('data.csv')
+        fetch('cleaned_data.csv')
             .then(response => response.text())
             .then(csvText => {
                 const rows = csvText.split('\n').slice(1);
 
                 // 数据存储
-                const countryData = {}, top10Data = [], bubbleData = [], locationCount = {};
-                const radarData = {}, overallScores = [];
+                const top10Data = [], bubbleData = [], locationCount = {}, radarData = {};
+                const overallScores = [];
+                const countryData = {};
 
-                // 数据解析
                 rows.forEach(row => {
                     const cols = row.split(',');
-                    const rank = parseInt(cols[0]);        // 排名
-                    const institution = cols[1];          // 大学名称
-                    const location = cols[3];             // 国家/地区
-                    const score = parseFloat(cols[26]);   // Overall Score
-                    const ar = parseFloat(cols[8]);       // ar score
-                    const ger = parseFloat(cols[24]);     // ger score
-                    const sus = parseFloat(cols[25]);     // SUS SCORE
+                    const rank = parseInt(cols[0]);
+                    const institution = cols[1];
+                    const location = cols[3];
+                    const score = parseFloat(cols[26]);
+                    const ar = parseFloat(cols[8]);
+                    const ger = parseFloat(cols[24]);
+                    const sus = parseFloat(cols[25]);
 
-                    // 前10名用于折线图和雷达图
+                    // 前 10 名大学数据
                     if (rank && rank <= 10) {
                         top10Data.push({ name: institution, score });
                         radarData[institution] = [ar, ger, sus];
                     }
-                     if (institution && institution !== 'undefined' && !isNaN(score)) {
+                    
+if (institution && institution !== 'undefined' && !isNaN(score)) {
         if (!overallScores.some(item => item.name === institution)) {
             overallScores.push({ name: institution, value: score });
         }
     }
-
                     // 气泡图数据
                     if (rank && score) bubbleData.push([rank, score, sus]);
 
-                    // 国家/地区统计
-                    if (location) {
-                        countryData[location] = countryData[location] || { count: 0, totalScore: 0 };
+                    // 地区分布统计
+                    if (location) locationCount[location] = (locationCount[location] || 0) + 1;
+
+                    // 前 10 名评分进度条
+                    overallScores.push({ name: institution, value: score });
+
+                    // 双 Y 轴柱状图：按国家分组
+                    if (location && !isNaN(score)) {
+                        if (!countryData[location]) {
+                            countryData[location] = { count: 0, totalScore: 0 };
+                        }
                         countryData[location].count += 1;
                         countryData[location].totalScore += score;
-                        locationCount[location] = (locationCount[location] || 0) + 1;
                     }
-
-                    // 总体分数用于进度条图
-                    overallScores.push({ name: institution, value: score });
-                    overallScores.sort((a, b) => b.value - a.value);
-
                 });
 
-                // 渲染所有图表
+                // 整理国家数据
+                const countries = Object.keys(countryData);
+                const universityCounts = countries.map(country => countryData[country].count);
+                const avgScores = countries.map(country => 
+                    (countryData[country].totalScore / countryData[country].count).toFixed(2)
+                );
+
+                // 渲染图表
                 renderLineChart(top10Data);
                 renderBubbleChart(bubbleData);
                 renderRoseChart(locationCount);
                 renderRadarChart(radarData);
                 renderBarChart(overallScores);
+                renderWaterfallChart(overallScores);
                 renderMapChart(locationCount);
-                renderHeatmapChart(countryData);
+                renderDualAxisChart(countries, universityCounts, avgScores);
             });
 
         // 动态排名折线图
         function renderLineChart(data) {
             const chart = echarts.init(document.getElementById('line-chart'));
             chart.setOption({
-                title: { text: 'Top 10 Universities - Ranking Trend' },
+                title: { text: 'Top 10 Universities Ranking Trend' },
                 xAxis: { type: 'category', data: data.map(d => d.name) },
-                yAxis: { type: 'value', name: 'Overall Score' },
-                series: [{ type: 'line', data: data.map(d => d.score), smooth: true, color: '#5470C6' }]
+                yAxis: { type: 'value', inverse: true },
+                series: [{ type: 'line', data: data.map(d => d.score), smooth: true }]
             });
         }
 
@@ -102,78 +111,67 @@
             const chart = echarts.init(document.getElementById('bubble-chart'));
             chart.setOption({
                 title: { text: 'Rank vs Overall Score (Bubble Size: SUS SCORE)' },
-                xAxis: { name: 'Rank', type: 'value' },
-                yAxis: { name: 'Overall Score', type: 'value' },
-                series: [{ type: 'scatter', symbolSize: d => d[2] / 2, data, color: '#91cc75' }]
+                xAxis: { name: 'Rank' },
+                yAxis: { name: 'Overall Score' },
+                series: [{ type: 'scatter', symbolSize: d => d[2] / 2, data }]
             });
         }
 
-        // 玫瑰图：大学分布
+        // 玫瑰图
         function renderRoseChart(data) {
             const chart = echarts.init(document.getElementById('rose-chart'));
             chart.setOption({
                 title: { text: 'University Distribution by Region' },
-                series: [{ type: 'pie', radius: [30, 120], roseType: 'area', data: Object.entries(data).map(([name, value]) => ({ name, value })) }]
+                series: [{ type: 'pie', radius: [20, 100], roseType: 'radius', 
+                           data: Object.entries(data).map(([name, value]) => ({ name, value })) }]
             });
         }
 
-        // 雷达图：指标对比
+        // 雷达图
         function renderRadarChart(data) {
             const chart = echarts.init(document.getElementById('radar-chart'));
-            const indicators = [{ name: 'ar score', max: 100 }, { name: 'ger score', max: 100 }, { name: 'SUS SCORE', max: 100 }];
-            const seriesData = Object.entries(data).map(([name, value]) => ({ name, value }));
+            const indicator = [{ name: 'ar score', max: 100 }, { name: 'ger score', max: 100 }, { name: 'SUS SCORE', max: 100 }];
             chart.setOption({
-                title: { text: 'Top 10 Universities - Key Metrics' },
-                radar: { indicator: indicators },
-                series: [{ type: 'radar', data: seriesData }]
+                title: { text: 'Top Universities Key Metrics' },
+                radar: { indicator },
+                series: [{ type: 'radar', data: Object.entries(data).map(([name, value]) => ({ name, value })) }]
             });
         }
 
-        // 进度条图：总体分数
+        // 进度条图
         function renderBarChart(data) {
             const chart = echarts.init(document.getElementById('bar-chart'));
             chart.setOption({
-                title: { text: 'Overall Score Progress' },
-                xAxis: { type: 'value', name: 'Score' },
+                title: { text: 'Top 10 Universities - Overall Score Progress' },
+                xAxis: { type: 'value' },
                 yAxis: { type: 'category', data: data.map(d => d.name) },
-                series: [{ type: 'bar', data: data.map(d => d.value), color: '#73b9bc' }]
+                series: [{ type: 'bar', data: data.map(d => d.value) }]
             });
         }
 
-        // 世界地图：大学分布
+        // 世界地图热力图
         function renderMapChart(data) {
             const chart = echarts.init(document.getElementById('map-chart'));
             chart.setOption({
-                title: { text: 'University Distribution by Country' },
+                title: { text: 'Global University Distribution' },
                 visualMap: { min: 0, max: Math.max(...Object.values(data)), inRange: { color: ['#e0ffff', '#006edd'] } },
-                series: [{ type: 'map', map: 'world', roam: true, data: Object.entries(data).map(([name, value]) => ({ name, value })) }]
+                series: [{ type: 'map', map: 'world', data: Object.entries(data).map(([name, value]) => ({ name, value })) }]
             });
         }
 
         // 双 Y 轴柱状图
-        function renderHeatmapChart(data) {
-            const chart = echarts.init(document.getElementById('heatmap-chart'));
-            const countries = Object.keys(data);
-            const universityCounts = countries.map(c => data[c].count);
-            const avgScores = countries.map(c => 
-    countryData[c].count > 0 
-    ? countryData[c].totalScore / countryData[c].count 
-    : 0
-);
-
-
+        function renderDualAxisChart(countries, counts, scores) {
+            const chart = echarts.init(document.getElementById('dual-axis-chart'));
             chart.setOption({
-                title: { text: 'Global University Ranking Heatmap' },
-                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-                legend: { data: ['大学数量', '平均排名分数'] },
+                title: { text: 'University Count & Average Score by Country' },
                 xAxis: { type: 'category', data: countries },
                 yAxis: [
-                    { type: 'value', name: '大学数量', position: 'left' },
-                    { type: 'value', name: '平均排名分数', position: 'right', min: 0, max: 100 }
+                    { type: 'value', name: '大学数量' },
+                    { type: 'value', name: '平均分数', min: 0, max: 100 }
                 ],
                 series: [
-                    { name: '大学数量', type: 'bar', data: universityCounts, yAxisIndex: 0, color: '#003366' },
-                    { name: '平均排名分数', type: 'bar', data: avgScores, yAxisIndex: 1, color: '#3399FF' }
+                    { name: '大学数量', type: 'bar', data: counts, yAxisIndex: 0, color: '#003366' },
+                    { name: '平均分数', type: 'bar', data: scores, yAxisIndex: 1, color: '#3399FF' }
                 ]
             });
         }
