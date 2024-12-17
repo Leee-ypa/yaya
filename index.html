@@ -21,7 +21,7 @@
         .dashboard-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: auto;
+            grid-auto-rows: 400px;
             gap: 20px;
             max-width: 1400px;
             margin: 20px auto;
@@ -33,10 +33,12 @@
             border-radius: 8px;
             padding: 10px;
             box-sizing: border-box;
-            height: 400px;
         }
         #heatmapChart, #sankeyChart, #wordCloudChart {
             grid-column: span 2;
+            height: 500px;
+        }
+        #dualBarChart {
             height: 500px;
         }
     </style>
