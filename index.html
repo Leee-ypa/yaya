@@ -20,7 +20,7 @@
         }
         .dashboard-container {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             grid-auto-rows: 400px;
             gap: 20px;
             max-width: 1400px;
@@ -36,17 +36,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
             height: 100%;
         }
-        .chart::before {
-            content: '图表加载中...';
-            position: absolute;
-            font-size: 16px;
-            color: #999;
-        }
-        #heatmapChart, #sankeyChart, #wordCloudChart {
-            grid-column: span 2;
+        #sankeyChart, #wordCloudChart {
+            grid-column: span 3;
             height: 500px;
         }
         #dualBarChart {
@@ -62,7 +55,6 @@
         <div id="pieChart" class="chart"></div>
         <div id="lineChart" class="chart"></div>
         <div id="dualBarChart" class="chart"></div>
-        <div id="heatmapChart" class="chart"></div>
         <div id="sankeyChart" class="chart"></div>
         <div id="wordCloudChart" class="chart"></div>
     </div>
@@ -86,8 +78,6 @@
         let charts = [];
 
         function renderCharts(institutions, scores, regions, countries) {
-            document.querySelectorAll('.chart').forEach(chart => chart.style.background = 'none');
-            
             // 词云图
             const wordCloudChart = echarts.init(document.getElementById('wordCloudChart'));
             charts.push(wordCloudChart);
