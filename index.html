@@ -4,18 +4,51 @@
     <meta charset="utf-8">
     <title>ECharts Visualization</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 24px;
+        }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
+            margin: 20px auto;
+            max-width: 1200px;
+        }
+        .chart {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body>
-    <!-- 柱状图的容器 -->
-    <div id="barChart" style="width: 600px;height:400px;"></div>
-    <!-- 饼图的容器 -->
-    <div id="pieChart" style="width: 600px;height:400px;"></div>
-    <!-- 折线图的容器 -->
-    <div id="lineChart" style="width: 600px;height:400px;"></div>
-    <!-- 组合双Y轴柱状图容器 -->
-    <div id="dualBarChart" style="width: 800px;height:500px;"></div>
-    <!-- 全局大学排名热力图 -->
-    <div id="heatmapChart" style="width: 800px;height:500px;"></div>
+    <h1>全球大学排名可视化</h1>
+    <div class="chart-container">
+        <!-- 柱状图的容器 -->
+        <div id="barChart" class="chart" style="width: 45%; height: 400px;"></div>
+        <!-- 饼图的容器 -->
+        <div id="pieChart" class="chart" style="width: 45%; height: 400px;"></div>
+        <!-- 折线图的容器 -->
+        <div id="lineChart" class="chart" style="width: 45%; height: 400px;"></div>
+        <!-- 组合双Y轴柱状图容器 -->
+        <div id="dualBarChart" class="chart" style="width: 45%; height: 400px;"></div>
+        <!-- 全局大学排名热力图 -->
+        <div id="heatmapChart" class="chart" style="width: 90%; height: 500px;"></div>
+    </div>
 
     <script>
         // 异步加载CSV文件数据
