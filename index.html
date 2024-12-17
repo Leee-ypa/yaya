@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>ECharts Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,7 +34,7 @@
             padding: 10px;
             box-sizing: border-box;
         }
-        #heatmapChart {
+        #heatmapChart, #sankeyChart, #wordCloudChart {
             grid-column: span 2;
         }
     </style>
@@ -41,118 +42,127 @@
 <body>
     <h1>全球大学排名可视化仪表盘</h1>
     <div class="dashboard-container">
-        <!-- 柱状图的容器 -->
         <div id="barChart" class="chart" style="height: 400px;"></div>
-        <!-- 饼图的容器 -->
         <div id="pieChart" class="chart" style="height: 400px;"></div>
-        <!-- 折线图的容器 -->
         <div id="lineChart" class="chart" style="height: 400px;"></div>
-        <!-- 组合双Y轴柱状图容器 -->
         <div id="dualBarChart" class="chart" style="height: 400px;"></div>
-        <!-- 全局大学排名热力图 -->
         <div id="heatmapChart" class="chart" style="height: 500px;"></div>
+        <div id="sankeyChart" class="chart" style="height: 500px;"></div>
+        <div id="wordCloudChart" class="chart" style="height: 500px;"></div>
     </div>
 
     <script>
-        // 异步加载CSV文件数据
         async function loadData() {
             const response = await fetch('data.csv');
             const csvText = await response.text();
             const rows = csvText.split('\n').map(row => row.split(','));
-            const headers = rows[0];
             const data = rows.slice(1).filter(row => row.length >= 5 && row[1] && !isNaN(parseFloat(row[4])));
             
             const institutions = data.map(row => row[1]);
             const scores = data.map(row => parseFloat(row[4]));
-            const regions = data.map(row => row[3]); // 地区字段
-            const countries = data.map(row => row[2]); // 国家字段
-            const rankings = data.map(row => row[0]);
+            const regions = data.map(row => row[3]);
+            const countries = data.map(row => row[2]);
 
-            renderCharts(institutions, scores, regions, countries, rankings);
+            renderCharts(institutions, scores, regions, countries);
         }
 
-        function renderCharts(institutions, scores, regions, countries, rankings) {
-            // ----- 柱状图 -----
-            const barChart = echarts.init(document.getElementById('barChart'));
-            const barOption = {
-                title: { text: '高校综合评分柱状图' },
-                tooltip: { trigger: 'axis' },
-                xAxis: {
-                    type: 'category',
-                    data: institutions.slice(0, 20), // 前20个高校
-                    axisLabel: { interval: 1, rotate: 30 }
-                },
-                yAxis: { type: 'value' },
+        function renderCharts(institutions, scores, regions, countries) {
+            // 词云图
+            const wordCloudChart = echarts.init(document.getElementById('wordCloudChart'));
+            const wordData = institutions.map((inst, i) => ({ name: inst, value: scores[i] }));
+            const wordOption = {
+                title: { text: '高校名称词云图' },
                 series: [{
-                    data: scores.slice(0, 20),
-                    type: 'bar',
-                    barWidth: '50%',
-                    itemStyle: { color: '#4B8BF4' }
+                    type: 'wordCloud',
+                    data: wordData,
+                    textStyle: { fontFamily: 'sans-serif' }
                 }]
             };
-            barChart.setOption(barOption);
+            wordCloudChart.setOption(wordOption);
 
-            // ----- 饼图（地区） -----
+            // 桑基图
+            const sankeyChart = echarts.init(document.getElementById('sankeyChart'));
+            const sankeyData = [];
+            const regionCounts = {};
+            regions.forEach((region, i) => {
+                const country = countries[i];
+                sankeyData.push({ source: region, target: country, value: 1 });
+            });
+            const sankeyOption = {
+                title: { text: '地区-国家高校分布桑基图' },
+                series: [{
+                    type: 'sankey',
+                    data: [...new Set(regions.concat(countries))].map(name => ({ name })),
+                    links: sankeyData,
+                    emphasis: { focus: 'adjacency' }
+                }]
+            };
+            sankeyChart.setOption(sankeyOption);
+
+            // 其他图表
+            renderBarChart(institutions, scores);
+            renderPieChart(regions);
+            renderLineChart(scores);
+            renderDualBarChart(countries, scores);
+        }
+
+        function renderBarChart(institutions, scores) {
+            const barChart = echarts.init(document.getElementById('barChart'));
+            const option = {
+                title: { text: '高校综合评分柱状图' },
+                xAxis: { type: 'category', data: institutions.slice(0, 20) },
+                yAxis: { type: 'value' },
+                series: [{ type: 'bar', data: scores.slice(0, 20) }]
+            };
+            barChart.setOption(option);
+        }
+
+        function renderPieChart(regions) {
             const pieChart = echarts.init(document.getElementById('pieChart'));
             const regionCounts = {};
             regions.forEach(region => regionCounts[region] = (regionCounts[region] || 0) + 1);
-            const pieData = Object.keys(regionCounts).map(region => ({ name: region, value: regionCounts[region] }));
-
-            const pieOption = {
+            const option = {
                 title: { text: '高校分布饼图（按地区）' },
-                series: [{ type: 'pie', data: pieData }]
-            };
-            pieChart.setOption(pieOption);
-
-            // ----- 折线图 -----
-            const lineChart = echarts.init(document.getElementById('lineChart'));
-            const lineOption = {
-                title: { text: '高校排名与评分折线图' },
-                xAxis: {
-                    type: 'category',
-                    data: rankings.map(r => '排名 ' + r)
-                },
-                yAxis: { type: 'value' },
                 series: [{
-                    data: scores,
-                    type: 'line',
-                    smooth: true,
-                    itemStyle: { color: '#E9897E' }
+                    type: 'pie',
+                    data: Object.keys(regionCounts).map(key => ({ name: key, value: regionCounts[key] }))
                 }]
             };
-            lineChart.setOption(lineOption);
+            pieChart.setOption(option);
+        }
 
-            // ----- 双Y轴柱状图 -----
+        function renderLineChart(scores) {
+            const lineChart = echarts.init(document.getElementById('lineChart'));
+            const option = {
+                title: { text: '高校评分折线图' },
+                xAxis: { type: 'category', data: scores.map((_, i) => i + 1) },
+                yAxis: { type: 'value' },
+                series: [{ type: 'line', data: scores }]
+            };
+            lineChart.setOption(option);
+        }
+
+        function renderDualBarChart(countries, scores) {
             const dualBarChart = echarts.init(document.getElementById('dualBarChart'));
             const countryCounts = {};
             const countryScores = {};
-
-            countries.forEach((country, index) => {
-                countryCounts[country] = (countryCounts[country] || 0) + 1;
-                if (!countryScores[country]) countryScores[country] = [];
-                countryScores[country].push(scores[index]);
+            countries.forEach((c, i) => {
+                countryCounts[c] = (countryCounts[c] || 0) + 1;
+                if (!countryScores[c]) countryScores[c] = [];
+                countryScores[c].push(scores[i]);
             });
-            
-            const avgCountryScores = Object.keys(countryScores).map(country => {
-                const sum = countryScores[country].reduce((a, b) => a + b, 0);
-                return sum / countryScores[country].length;
-            });
-
-            const dualBarOption = {
-                title: { text: '国家高校数量与平均评分双Y轴柱状图' },
-                tooltip: { trigger: 'axis' },
-                legend: { data: ['高校数量', '平均评分'] },
+            const avgScores = Object.keys(countryScores).map(country => 
+                countryScores[country].reduce((a, b) => a + b, 0) / countryScores[country].length);
+            const option = {
+                title: { text: '国家高校数量与平均评分' },
                 xAxis: { type: 'category', data: Object.keys(countryCounts) },
-                yAxis: [
-                    { type: 'value', name: '高校数量' },
-                    { type: 'value', name: '平均评分' }
-                ],
+                yAxis: [{ type: 'value' }, { type: 'value' }],
                 series: [
-                    { name: '高校数量', type: 'bar', data: Object.values(countryCounts), barWidth: '40%' },
-                    { name: '平均评分', type: 'bar', yAxisIndex: 1, data: avgCountryScores, barWidth: '40%' }
+                    { type: 'bar', data: Object.values(countryCounts), name: '高校数量' },
+                    { type: 'bar', yAxisIndex: 1, data: avgScores, name: '平均评分' }
                 ]
             };
-            dualBarChart.setOption(dualBarOption);
+            dualBarChart.setOption(option);
         }
 
         loadData();
