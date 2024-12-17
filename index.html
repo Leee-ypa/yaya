@@ -6,77 +6,89 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.0/dist/echarts.min.js"></script>
 </head>
 <body>
-    <!-- Container for Bar Chart -->
+    <!-- 柱状图的容器 -->
     <div id="barChart" style="width: 600px;height:400px;"></div>
-    <!-- Container for Pie Chart -->
+    <!-- 饼图的容器 -->
     <div id="pieChart" style="width: 600px;height:400px;"></div>
-    <!-- Container for Line Chart -->
+    <!-- 折线图的容器 -->
     <div id="lineChart" style="width: 600px;height:400px;"></div>
 
     <script>
-        // Mock Data: Replace this with actual backend data
-        const institutions = [
-            'Massachusetts Institute of Technology (MIT)',
-            'Imperial College London',
-            'University of Oxford',
-            'Harvard University',
-            'University of Cambridge'
-        ];
-        const scores = [100.0, 98.5, 96.9, 96.8, 96.7];
-        const locations = ['Americas', 'Europe', 'Europe', 'Americas', 'Europe'];
-        const rankings = [1, 2, 3, 4, 5];
+        // 异步加载CSV文件数据
+        async function loadData() {
+            const response = await fetch('data.csv'); // 将此路径替换为实际数据集路径
+            const csvText = await response.text(); // 读取CSV文本内容
+            const rows = csvText.split('\n').map(row => row.split(',')); // 按行拆分CSV数据
+            const headers = rows[0]; // CSV的第一行是表头
+            const data = rows.slice(1); // 数据行
 
-        // ----- Bar Chart -----
-        var barChart = echarts.init(document.getElementById('barChart'));
-        var barOption = {
-            title: { text: 'Top Institutions by Overall Score' },
-            xAxis: {
-                type: 'category',
-                data: institutions
-            },
-            yAxis: { type: 'value' },
-            series: [{
-                data: scores,
-                type: 'bar'
-            }]
-        };
-        barChart.setOption(barOption);
+            // 提取数据列：高校名称、评分、地理位置和排名
+            const institutions = data.map(row => row[1]); // 第2列：高校名称
+            const scores = data.map(row => parseFloat(row[4])); // 第5列：综合评分
+            const locations = data.map(row => row[3]); // 第4列：大洲位置
+            const rankings = data.map(row => row[0]); // 第1列：排名
 
-        // ----- Pie Chart -----
-        var pieChart = echarts.init(document.getElementById('pieChart'));
-        var locationCounts = {};
-        locations.forEach(loc => locationCounts[loc] = (locationCounts[loc] || 0) + 1);
+            // 调用函数渲染图表
+            renderCharts(institutions, scores, locations, rankings);
+        }
 
-        var pieData = Object.keys(locationCounts).map(loc => ({
-            name: loc,
-            value: locationCounts[loc]
-        }));
+        // 渲染图表的函数
+        function renderCharts(institutions, scores, locations, rankings) {
+            // ----- 柱状图 -----
+            var barChart = echarts.init(document.getElementById('barChart'));
+            var barOption = {
+                title: { text: '高校综合评分柱状图' }, // 图表标题
+                xAxis: {
+                    type: 'category',
+                    data: institutions // X轴数据：高校名称
+                },
+                yAxis: { type: 'value' }, // Y轴数据类型：数值
+                series: [{
+                    data: scores, // 数据：综合评分
+                    type: 'bar' // 图表类型：柱状图
+                }]
+            };
+            barChart.setOption(barOption); // 设置图表选项
 
-        var pieOption = {
-            title: { text: 'Institution Distribution by Location' },
-            series: [{
-                type: 'pie',
-                data: pieData
-            }]
-        };
-        pieChart.setOption(pieOption);
+            // ----- 饼图 -----
+            var pieChart = echarts.init(document.getElementById('pieChart'));
+            var locationCounts = {}; // 初始化位置统计对象
+            locations.forEach(loc => locationCounts[loc] = (locationCounts[loc] || 0) + 1); // 统计每个位置出现的次数
 
-        // ----- Line Chart -----
-        var lineChart = echarts.init(document.getElementById('lineChart'));
-        var lineOption = {
-            title: { text: 'Top Institutions: Rank vs Score' },
-            xAxis: {
-                type: 'category',
-                data: rankings.map(r => 'Rank ' + r)
-            },
-            yAxis: { type: 'value', name: 'Score' },
-            series: [{
-                data: scores,
-                type: 'line',
-                smooth: true
-            }]
-        };
-        lineChart.setOption(lineOption);
+            var pieData = Object.keys(locationCounts).map(loc => ({
+                name: loc, // 名称：大洲位置
+                value: locationCounts[loc] // 值：对应的数量
+            }));
+
+            var pieOption = {
+                title: { text: '高校分布饼图' }, // 图表标题
+                series: [{
+                    type: 'pie', // 图表类型：饼图
+                    data: pieData // 数据
+                }]
+            };
+            pieChart.setOption(pieOption); // 设置图表选项
+
+            // ----- 折线图 -----
+            var lineChart = echarts.init(document.getElementById('lineChart'));
+            var lineOption = {
+                title: { text: '高校排名与评分折线图' }, // 图表标题
+                xAxis: {
+                    type: 'category',
+                    data: rankings.map(r => '排名 ' + r) // X轴数据：排名
+                },
+                yAxis: { type: 'value', name: '评分' }, // Y轴：评分
+                series: [{
+                    data: scores, // 数据：评分
+                    type: 'line', // 图表类型：折线图
+                    smooth: true // 平滑线条
+                }]
+            };
+            lineChart.setOption(lineOption); // 设置图表选项
+        }
+
+        // 加载数据并渲染图表
+        loadData();
     </script>
 </body>
 </html>
