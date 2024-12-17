@@ -43,7 +43,7 @@
                     const location = cols[3];
                     const score = parseFloat(cols[26]);
 
-                    if (rank && rank <= 10) {
+                    if (rank && rank <= 100) {
                         top10Data.push({ name: institution, value: score });
                         radarData[institution] = [parseFloat(cols[8]), parseFloat(cols[24]), parseFloat(cols[25])];
                     }
@@ -67,7 +67,7 @@
         function renderBarChart(data) {
             const chart = echarts.init(document.getElementById('bar-chart'));
             chart.setOption({
-                title: { text: 'Top 10 Universities - Overall Score' },
+                title: { text: 'Top 100 Universities - Overall Score' },
                 xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: { rotate: 45 } },
                 yAxis: { type: 'value', name: 'Overall Score' },
                 series: [{ type: 'bar', data: data.map(d => d.value), itemStyle: { color: '#73b9bc' } }]
