@@ -53,6 +53,11 @@
                         top10Data.push({ name: institution, score });
                         radarData[institution] = [ar, ger, sus];
                     }
+                     if (institution && institution !== 'undefined' && !isNaN(score)) {
+        if (!overallScores.some(item => item.name === institution)) {
+            overallScores.push({ name: institution, value: score });
+        }
+    }
 
                     // 气泡图数据
                     if (rank && score) bubbleData.push([rank, score, sus]);
@@ -67,6 +72,8 @@
 
                     // 总体分数用于进度条图
                     overallScores.push({ name: institution, value: score });
+                    overallScores.sort((a, b) => b.value - a.value);
+
                 });
 
                 // 渲染所有图表
