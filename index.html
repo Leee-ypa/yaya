@@ -12,6 +12,10 @@
     <div id="pieChart" style="width: 600px;height:400px;"></div>
     <!-- 折线图的容器 -->
     <div id="lineChart" style="width: 600px;height:400px;"></div>
+    <!-- 组合双Y轴柱状图容器 -->
+    <div id="dualBarChart" style="width: 800px;height:500px;"></div>
+    <!-- 全局大学排名热力图 -->
+    <div id="heatmapChart" style="width: 800px;height:500px;"></div>
 
     <script>
         // 异步加载CSV文件数据
@@ -20,13 +24,22 @@
             const csvText = await response.text(); // 读取CSV文本内容
             const rows = csvText.split('\n').map(row => row.split(',')); // 按行拆分CSV数据
             const headers = rows[0]; // CSV的第一行是表头
-            const data = rows.slice(1); // 数据行
+            
+            // 数据行过滤空值，并检查有效分数
+            const data = rows.slice(1).filter(row => 
+                row.length >= 5 && row[1] && !isNaN(parseFloat(row[4]))
+            ); 
+            
+            console.log("Filtered Data:", data); // 调试：输出过滤后的数据
 
             // 提取数据列：高校名称、评分、地理位置和排名
             const institutions = data.map(row => row[1]); // 第2列：高校名称
             const scores = data.map(row => parseFloat(row[4])); // 第5列：综合评分
             const locations = data.map(row => row[3]); // 第4列：大洲位置
             const rankings = data.map(row => row[0]); // 第1列：排名
+            
+            console.log("Institutions:", institutions); // 调试：输出高校名称
+            console.log("Scores:", scores); // 调试：输出分数
 
             // 调用函数渲染图表
             renderCharts(institutions, scores, locations, rankings);
@@ -37,54 +50,95 @@
             // ----- 柱状图 -----
             var barChart = echarts.init(document.getElementById('barChart'));
             var barOption = {
-                title: { text: '高校综合评分柱状图' }, // 图表标题
+                title: { text: '高校综合评分柱状图' },
+                tooltip: { trigger: 'axis' },
                 xAxis: {
                     type: 'category',
-                    data: institutions // X轴数据：高校名称
+                    data: institutions,
+                    axisLabel: {
+                        interval: 0,
+                        rotate: 30,
+                        formatter: function(value) {
+                            return value.length > 10 ? value.substring(0, 10) + '...' : value;
+                        }
+                    }
                 },
-                yAxis: { type: 'value' }, // Y轴数据类型：数值
+                yAxis: { type: 'value' },
                 series: [{
-                    data: scores, // 数据：综合评分
-                    type: 'bar' // 图表类型：柱状图
+                    data: scores,
+                    type: 'bar',
+                    barWidth: '60%'
                 }]
             };
-            barChart.setOption(barOption); // 设置图表选项
+            barChart.setOption(barOption);
 
             // ----- 饼图 -----
             var pieChart = echarts.init(document.getElementById('pieChart'));
-            var locationCounts = {}; // 初始化位置统计对象
-            locations.forEach(loc => locationCounts[loc] = (locationCounts[loc] || 0) + 1); // 统计每个位置出现的次数
-
-            var pieData = Object.keys(locationCounts).map(loc => ({
-                name: loc, // 名称：大洲位置
-                value: locationCounts[loc] // 值：对应的数量
-            }));
+            var locationCounts = {};
+            locations.forEach(loc => locationCounts[loc] = (locationCounts[loc] || 0) + 1);
+            var pieData = Object.keys(locationCounts).map(loc => ({ name: loc, value: locationCounts[loc] }));
 
             var pieOption = {
-                title: { text: '高校分布饼图' }, // 图表标题
-                series: [{
-                    type: 'pie', // 图表类型：饼图
-                    data: pieData // 数据
-                }]
+                title: { text: '高校分布饼图' },
+                series: [{ type: 'pie', data: pieData }]
             };
-            pieChart.setOption(pieOption); // 设置图表选项
+            pieChart.setOption(pieOption);
 
             // ----- 折线图 -----
             var lineChart = echarts.init(document.getElementById('lineChart'));
             var lineOption = {
-                title: { text: '高校排名与评分折线图' }, // 图表标题
+                title: { text: '高校排名与评分折线图' },
                 xAxis: {
                     type: 'category',
-                    data: rankings.map(r => '排名 ' + r) // X轴数据：排名
+                    data: rankings.map(r => '排名 ' + r)
                 },
-                yAxis: { type: 'value', name: '评分' }, // Y轴：评分
+                yAxis: { type: 'value', name: '评分' },
                 series: [{
-                    data: scores, // 数据：评分
-                    type: 'line', // 图表类型：折线图
-                    smooth: true // 平滑线条
+                    data: scores,
+                    type: 'line',
+                    smooth: true
                 }]
             };
-            lineChart.setOption(lineOption); // 设置图表选项
+            lineChart.setOption(lineOption);
+
+            // ----- 组合双Y轴柱状图 -----
+            var dualBarChart = echarts.init(document.getElementById('dualBarChart'));
+            var universityCounts = {};
+            locations.forEach(loc => universityCounts[loc] = (universityCounts[loc] || 0) + 1);
+            const avgScores = locations.map((loc, index) => ({ name: loc, score: scores[index] }));
+            const countries = Array.from(new Set(locations));
+            const countryCounts = countries.map(country => universityCounts[country]);
+            const avgScorePerCountry = countries.map(country => {
+                const countryScores = avgScores.filter(item => item.name === country).map(item => item.score);
+                return countryScores.reduce((a, b) => a + b, 0) / countryScores.length;
+            });
+
+            var dualBarOption = {
+                title: { text: '全球大学排名双Y轴可视化' },
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['大学数量', '平均排名分数'] },
+                xAxis: [{ type: 'category', data: countries }],
+                yAxis: [{ type: 'value', name: '大学数量' }, { type: 'value', name: '平均排名分数' }],
+                series: [{ name: '大学数量', type: 'bar', data: countryCounts }, { name: '平均排名分数', type: 'bar', yAxisIndex: 1, data: avgScorePerCountry }]
+            };
+            dualBarChart.setOption(dualBarOption);
+
+            // ----- 热力图 -----
+            var heatmapChart = echarts.init(document.getElementById('heatmapChart'));
+            var heatmapOption = {
+                title: { text: '全球大学排名热力图' },
+                xAxis: { type: 'category', data: countries },
+                yAxis: { type: 'category', data: ['大学数量', '平均排名分数'] },
+                visualMap: { min: 0, max: 100, calculable: true, orient: 'vertical', left: 'right' },
+                series: [{
+                    name: '热力图',
+                    type: 'heatmap',
+                    data: countries.map((country, index) => [index, 0, countryCounts[index]]).concat(
+                          countries.map((country, index) => [index, 1, avgScorePerCountry[index]])),
+                    label: { show: true }
+                }]
+            };
+            heatmapChart.setOption(heatmapOption);
         }
 
         // 加载数据并渲染图表
