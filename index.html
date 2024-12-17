@@ -70,11 +70,15 @@
             const countries = data.map(row => row[2]);
 
             renderCharts(institutions, scores, regions, countries);
+            window.addEventListener('resize', resizeCharts);
         }
+
+        let charts = [];
 
         function renderCharts(institutions, scores, regions, countries) {
             // 词云图
             const wordCloudChart = echarts.init(document.getElementById('wordCloudChart'));
+            charts.push(wordCloudChart);
             const wordData = institutions.map((inst, i) => ({ name: inst, value: scores[i] }));
             const wordOption = {
                 title: { text: '高校名称词云图' },
@@ -88,6 +92,7 @@
 
             // 桑基图
             const sankeyChart = echarts.init(document.getElementById('sankeyChart'));
+            charts.push(sankeyChart);
             const sankeyData = [];
             regions.forEach((region, i) => {
                 const country = countries[i];
@@ -112,6 +117,7 @@
 
         function renderBarChart(institutions, scores) {
             const barChart = echarts.init(document.getElementById('barChart'));
+            charts.push(barChart);
             const option = {
                 title: { text: '高校综合评分柱状图' },
                 xAxis: { type: 'category', data: institutions.slice(0, 20) },
@@ -123,6 +129,7 @@
 
         function renderPieChart(regions) {
             const pieChart = echarts.init(document.getElementById('pieChart'));
+            charts.push(pieChart);
             const regionCounts = {};
             regions.forEach(region => regionCounts[region] = (regionCounts[region] || 0) + 1);
             const option = {
@@ -137,6 +144,7 @@
 
         function renderLineChart(scores) {
             const lineChart = echarts.init(document.getElementById('lineChart'));
+            charts.push(lineChart);
             const option = {
                 title: { text: '高校评分折线图' },
                 xAxis: { type: 'category', data: scores.map((_, i) => i + 1) },
@@ -148,6 +156,7 @@
 
         function renderDualBarChart(countries, scores) {
             const dualBarChart = echarts.init(document.getElementById('dualBarChart'));
+            charts.push(dualBarChart);
             const countryCounts = {};
             const countryScores = {};
             countries.forEach((c, i) => {
@@ -168,6 +177,10 @@
                 ]
             };
             dualBarChart.setOption(option);
+        }
+
+        function resizeCharts() {
+            charts.forEach(chart => chart.resize());
         }
 
         loadData();
