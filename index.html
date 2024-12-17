@@ -3,117 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QS World University Rankings - Visualizations</title>
+    <title>QS World University Rankings Visualization</title>
     <!-- 引入 ECharts 和世界地图组件 -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts/map/js/world.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        h1 { text-align: center; margin: 20px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; }
+        h1 { margin: 20px; }
         .chart-container { width: 45%; height: 500px; display: inline-block; margin: 10px; }
     </style>
 </head>
 <body>
     <h1>QS World University Rankings 2025</h1>
-    <!-- 四个图表容器 -->
+    <!-- 容器 -->
     <div id="bar-chart" class="chart-container"></div>
     <div id="map-chart" class="chart-container"></div>
     <div id="scatter-chart" class="chart-container"></div>
+    <div id="radar-chart" class="chart-container"></div>
     <div id="pie-chart" class="chart-container"></div>
 
     <script>
-        // 使用 fetch 加载数据文件 data.csv
         fetch('data.csv')
-            .then(response => response.text()) // 读取文件内容为文本
+            .then(response => response.text())
             .then(csvText => {
+                const rows = csvText.split('\n').slice(1); // 跳过标题行
+
+                // 数据存储
+                const top10Data = [];
+                const locationCount = {};
+                const scatterData = [];
+                const radarMetrics = ['ar score', 'ger score', 'SUS SCORE'];
+                const radarData = {};
+
                 // 解析 CSV 数据
-                const rows = csvText.split('\n').slice(1); // 跳过第一行（标题行）
-
-                // 初始化数据存储
-                const top10Data = [];     // 存储前 10 名大学数据
-                const locationCount = {}; // 存储各国家/地区大学数量
-                const scatterData = [];   // 存储排名与分数关系数据
-
-                // 遍历 CSV 数据的每一行
                 rows.forEach(row => {
-                    const cols = row.split(','); // 将每一行分割为单独的列
-                    const rank = parseInt(cols[1]);       // 提取排名
-                    const institution = cols[3];          // 提取大学名称
-                    const location = cols[5];             // 提取国家/地区
-                    const score = parseFloat(cols[28]);   // 提取 Overall Score
+                    const cols = row.split(',');
+                    const rank = parseInt(cols[0]);
+                    const institution = cols[1];
+                    const location = cols[3];
+                    const score = parseFloat(cols[26]);
 
-                    // 提取前 10 名大学的数据
-                    if (rank && rank <= 100) {
+                    if (rank && rank <= 10) {
                         top10Data.push({ name: institution, value: score });
+                        radarData[institution] = [parseFloat(cols[8]), parseFloat(cols[24]), parseFloat(cols[25])];
                     }
 
-                    // 统计国家/地区的大学数量
                     if (location) {
                         locationCount[location] = (locationCount[location] || 0) + 1;
                     }
 
-                    // 添加排名与分数的散点图数据
-                    if (rank && score) {
-                        scatterData.push([rank, score]);
-                    }
+                    if (rank && score) scatterData.push([rank, score]);
                 });
 
                 // 渲染图表
                 renderBarChart(top10Data);
                 renderMapChart(locationCount);
                 renderScatterChart(scatterData);
+                renderRadarChart(radarData, radarMetrics);
                 renderPieChart(locationCount);
             });
 
-        // 渲染柱状图：前 10 名大学的 Overall Score
+        // 柱状图
         function renderBarChart(data) {
             const chart = echarts.init(document.getElementById('bar-chart'));
-            const option = {
-                title: { text: 'Top 100 Universities - Overall Score' },
+            chart.setOption({
+                title: { text: 'Top 10 Universities - Overall Score' },
                 xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: { rotate: 45 } },
-                yAxis: { type: 'value', name: 'Score' },
-                series: [{ type: 'bar', data: data.map(d => d.value), itemStyle: { color: '#5470C6' } }]
-            };
-            chart.setOption(option);
+                yAxis: { type: 'value', name: 'Overall Score' },
+                series: [{ type: 'bar', data: data.map(d => d.value), itemStyle: { color: '#73b9bc' } }]
+            });
         }
 
-        // 渲染世界地图：大学分布
+        // 世界地图
         function renderMapChart(data) {
             const chart = echarts.init(document.getElementById('map-chart'));
             const mapData = Object.entries(data).map(([name, value]) => ({ name, value }));
-            const option = {
+            chart.setOption({
                 title: { text: 'University Distribution by Country' },
-                visualMap: { 
-                    min: 0, 
-                    max: Math.max(...mapData.map(d => d.value)),
-                    inRange: { color: ['#e0ffff', '#006edd'] }
-                },
+                visualMap: { min: 0, max: Math.max(...mapData.map(d => d.value)), inRange: { color: ['#e0ffff', '#006edd'] } },
                 series: [{ type: 'map', map: 'world', roam: true, data: mapData }]
-            };
-            chart.setOption(option);
+            });
         }
 
-        // 渲染散点图：展示排名与 Overall Score 的关系
+        // 散点图
         function renderScatterChart(data) {
             const chart = echarts.init(document.getElementById('scatter-chart'));
-            const option = {
+            chart.setOption({
                 title: { text: 'Rank vs Overall Score' },
                 xAxis: { name: 'Rank', type: 'value' },
-                yAxis: { name: 'Score', type: 'value' },
+                yAxis: { name: 'Overall Score', type: 'value' },
                 series: [{ type: 'scatter', data }]
-            };
-            chart.setOption(option);
+            });
         }
 
-        // 渲染饼图：不同地区大学的占比
+        // 雷达图
+        function renderRadarChart(data, metrics) {
+            const chart = echarts.init(document.getElementById('radar-chart'));
+            const indicator = metrics.map(metric => ({ name: metric, max: 100 }));
+            const seriesData = Object.entries(data).map(([name, values]) => ({ name, value: values }));
+            chart.setOption({
+                title: { text: 'Top 5 Universities - Key Metrics' },
+                radar: { indicator },
+                series: [{ type: 'radar', data: seriesData }]
+            });
+        }
+
+        // 饼图
         function renderPieChart(data) {
             const chart = echarts.init(document.getElementById('pie-chart'));
             const pieData = Object.entries(data).map(([name, value]) => ({ name, value }));
-            const option = {
+            chart.setOption({
                 title: { text: 'University Distribution by Region' },
                 series: [{ type: 'pie', radius: '50%', data: pieData }]
-            };
-            chart.setOption(option);
+            });
         }
     </script>
 </body>
