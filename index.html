@@ -53,11 +53,6 @@
                         radarData[institution] = [ar, ger, sus];
                     }
                     
-if (institution && institution !== 'undefined' && !isNaN(score)) {
-        if (!overallScores.some(item => item.name === institution)) {
-            overallScores.push({ name: institution, value: score });
-        }
-    }
                     // 气泡图数据
                     if (rank && score) bubbleData.push([rank, score, sus]);
 
